@@ -1,3 +1,6 @@
+// debug.js
+import { CELL_WIDTH, CELL_HEIGHT, GRID_COLS, GRID_ROWS } from './grid.js';
+
 window.addEventListener('DOMContentLoaded', () => {
   const lousaDiv = document.getElementById('lousa');
   const posicaoMouseDiv = document.getElementById('posicaoMouse');

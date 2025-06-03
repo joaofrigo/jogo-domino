@@ -59,16 +59,5 @@ function criarPecasDomino() {
 
 const posicaoMouseDiv = document.getElementById('posicaoMouse');
 
-lousaDiv.addEventListener('mousemove', (e) => {
-  const rect = lousaDiv.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  const col = Math.floor(x / CELL_WIDTH);
-  const row = Math.floor(y / CELL_HEIGHT);
-
-  posicaoMouseDiv.textContent = `Linha: ${row}, Coluna: ${col}`;
-});
-
 
 

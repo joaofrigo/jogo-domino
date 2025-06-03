@@ -4,6 +4,17 @@ body {
   text-align: center;
 }
 
+#debugGrid {
+  max-height: 600px;
+  overflow: auto;
+}
+#debugGrid table {
+  border-collapse: collapse;
+}
+#debugGrid td {
+  line-height: 20px;
+}
+
 .area {
   border: 2px solid #333;
   margin: 10px auto;
