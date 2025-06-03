@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dominó Interativo</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<h1>Dominó Interativo</h1>
+
+<div id="mao" class="area"></div>
+
+<div id="posicaoMouse" style="
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(0,0,0,0.7);
+  color: white;
+  padding: 6px 12px;
+  font-family: monospace;
+  font-size: 14px;
+  border-radius: 4px;
+  z-index: 10000;
+  user-select: none;
+  pointer-events: none;
+">
+  Linha: - , Coluna: -
+</div>
+
+<div id="lousa" class="area"></div>
+
+<script src="domino.js"></script>
+<script src="game.js"></script>
+<script src="debug.js"></script>
+
+</body>
+</html>

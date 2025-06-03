@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Dominó Familiar Em Libras{% endblock %}</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #FFF1E0, #E0F7FF);
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            position: relative;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 52px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        p {
+            font-size: 22px;
+            color: #444;
+            margin-bottom: 50px;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .start-button {
+            padding: 22px 50px;
+            font-size: 26px;
+            font-weight: bold;
+            color: #FFF;
+            background: #FF8C42;
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+
+        .start-button:hover {
+            background: #FF6F1E;
+            transform: scale(1.05);
+        }
+
+        .family-icon {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            opacity: 0.25;
+        }
+
+        .family-icon.top-left {
+            top: 20px;
+            left: 20px;
+            background-image: url('https://cdn-icons-png.flaticon.com/512/219/219983.png');
+        }
+
+        .family-icon.top-right {
+            top: 30px;
+            right: 30px;
+            background-image: url('https://cdn-icons-png.flaticon.com/512/219/219971.png');
+        }
+
+        .family-icon.bottom-left {
+            bottom: 30px;
+            left: 30px;
+            background-image: url('https://cdn-icons-png.flaticon.com/512/219/219955.png');
+        }
+
+        .family-icon.bottom-right {
+            bottom: 20px;
+            right: 20px;
+            background-image: url('https://cdn-icons-png.flaticon.com/512/219/219951.png');
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>

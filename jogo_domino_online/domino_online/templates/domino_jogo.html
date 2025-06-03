@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Dominó Familiar em Libras - Jogo{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background: #FFF7E8;
+        font-family: 'Comic Sans MS', cursive, sans-serif;
+        padding: 10px 20px;
+        user-select: none;
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #FF6F1E;
+        text-shadow: 1px 1px 2px #c25400;
+    }
+    #deck, #board {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 30px;
+        min-height: 140px;
+    }
+    .piece {
+        cursor: pointer;
+        width: 120px;
+        height: 60px;
+        display: flex;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        transition: transform 0.2s ease;
+        position: relative;
+    }
+    .piece:hover {
+        transform: scale(1.1);
+        box-shadow: 0 5px 12px rgba(0,0,0,0.25);
+        z-index: 10;
+    }
+    .side {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: #fff;
+        font-weight: bold;
+        font-size: 14px;
+        user-select: none;
+        padding: 4px;
+    }
+    .mae { background: #F44336; }
+    .pai { background: #2196F3; }
+    .irmao { background: #4CAF50; }
+    .avo_fem { background: #9C27B0; }
+    .avo_masc { background: #FF9800; }
+    .tia { background: #E91E63; }
+    .tio { background: #3F51B5; }
+
+    #deck {
+        border: 2px dashed #FF8C42;
+        padding: 10px;
+        border-radius: 15px;
+        background: #FFF3E6;
+    }
+    #board {
+        border: 2px solid #FF8C42;
+        padding: 10px;
+        border-radius: 15px;
+        background: #FFF1D1;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        min-height: 80px;
+    }
+    #message {
+        text-align: center;
+        font-size: 18px;
+        margin-bottom: 15px;
+        color: #FF6F1E;
+        font-weight: bold;
+    }
+    #validate-btn {
+        display: block;
+        margin: 0 auto 40px auto;
+        padding: 12px 40px;
+        background-color: #FF8C42;
+        color: white;
+        font-size: 20px;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        box-shadow: 0 5px 15px rgba(255, 140, 66, 0.5);
+        transition: background-color 0.3s ease;
+    }
+    #validate-btn:hover {
+        background-color: #FF6F1E;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Dominó Familiar em Libras</h2>
+<p id="message">Escolha uma peça no estoque e clique na extremidade da sequência onde deseja encaixá-la.</p>
+
+<!-- Peça inicial já posicionada no board -->
+<div id="board" aria-label="Sequência de peças posicionadas"></div>
+
+<!-- Estoque de peças restantes -->
+<div id="deck" aria-label="Estoque de peças"></div>
+
+<button id="validate-btn">Validar Sequência</button>
+
+<script>
+    const initialPiece = {{ initial_piece|safe }};
+    const deckData = {{ deck|safe }};
+
+    const board = [ initialPiece ];  // já começa com a peça inicial no tabuleiro
+
+    const deckDiv = document.getElementById('deck');
+    const boardDiv = document.getElementById('board');
+    const messageEl = document.getElementById('message');
+    const validateBtn = document.getElementById('validate-btn');
+
+    const colorMap = {
+        "mae": "mae",
+        "pai": "pai",
+        "irmao": "irmao",
+        "avo_fem": "avo_fem",
+        "avo_masc": "avo_masc",
+        "tia": "tia",
+        "tio": "tio"
+    };
+
+    let selectedPiece = null;
+
+    function renderPiece(piece) {
+        const div = document.createElement('div');
+        div.classList.add('piece');
+        div.dataset.pieceId = piece.piece_id;
+
+        const leftSide = document.createElement('div');
+        leftSide.classList.add('side', colorMap[piece.left]);
+        leftSide.textContent = piece.left;
+
+        const rightSide = document.createElement('div');
+        rightSide.classList.add('side', colorMap[piece.right]);
+        rightSide.textContent = piece.right;
+
+        div.appendChild(leftSide);
+        div.appendChild(rightSide);
+        return div;
+    }
+
+    function updateDeck() {
+        deckDiv.innerHTML = '';
+        deckData.forEach(p => {
+            if (!board.some(bp => bp.piece_id === p.piece_id)) {
+                const pieceEl = renderPiece(p);
+                pieceEl.addEventListener('click', () => {
+                    selectedPiece = p;
+                    messageEl.textContent = `Selecionado: [${p.left} | ${p.right}]. Clique na extremidade onde quer encaixar.`;
+                });
+                deckDiv.appendChild(pieceEl);
+            }
+        });
+    }
+
+    function updateBoard() {
+        boardDiv.innerHTML = '';
+        board.forEach(p => {
+            const pieceEl = renderPiece(p);
+            pieceEl.title = `Peça: [${p.left} | ${p.right}]`;
+
+            const leftConnector = document.createElement('button');
+            leftConnector.textContent = '+';
+            leftConnector.title = `Encaixar aqui: ${p.left}`;
+            leftConnector.style.marginRight = '5px';
+            leftConnector.addEventListener('click', () => tryPlacePiece('left', p.piece_id));
+
+            const rightConnector = document.createElement('button');
+            rightConnector.textContent = '+';
+            rightConnector.title = `Encaixar aqui: ${p.right}`;
+            rightConnector.style.marginLeft = '5px';
+            rightConnector.addEventListener('click', () => tryPlacePiece('right', p.piece_id));
+
+            const container = document.createElement('div');
+            container.style.display = 'flex';
+            container.style.alignItems = 'center';
+            container.appendChild(leftConnector);
+            container.appendChild(pieceEl);
+            container.appendChild(rightConnector);
+
+            boardDiv.appendChild(container);
+        });
+    }
+
+    function tryPlacePiece(side, targetPieceId) {
+        if (!selectedPiece) {
+            messageEl.textContent = "Selecione uma peça do estoque primeiro.";
+            return;
+        }
+
+        const targetPiece = board.find(p => p.piece_id === targetPieceId);
+        const matchValue = side === 'left' ? targetPiece.left : targetPiece.right;
+
+        if (selectedPiece.left === matchValue || selectedPiece.right === matchValue) {
+            placePiece(side, targetPieceId);
+        } else {
+            messageEl.textContent = `Não há correspondência para conectar com ${matchValue}.`;
+        }
+    }
+
+    function placePiece(side, targetPieceId) {
+        const index = board.findIndex(p => p.piece_id === targetPieceId);
+
+        const newEntry = selectedPiece;
+
+        if (side === 'left') {
+            board.splice(index, 0, newEntry);
+        } else {
+            board.splice(index + 1, 0, newEntry);
+        }
+
+        selectedPiece = null;
+        updateDeck();
+        updateBoard();
+        messageEl.textContent = "Peça posicionada.";
+    }
+
+    validateBtn.addEventListener('click', () => {
+        fetch("{% url 'validar_sequencia' %}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
+            body: JSON.stringify({ game_id: gameId, sequence: board })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                messageEl.textContent = "Sequência válida! Parabéns!";
+            } else {
+                messageEl.textContent = "Erro na validação: " + data.error;
+            }
+        });
+    });
+
+    function getCSRFToken() {
+        const name = 'csrftoken';
+        const cookies = document.cookie.split(';');
+        for (let c of cookies) {
+            c = c.trim();
+            if (c.startsWith(name + '=')) {
+                return decodeURIComponent(c.substring(name.length + 1));
+            }
+        }
+        return '';
+    }
+
+    updateDeck();
+    updateBoard();
+
+</script>
+{% endblock %}

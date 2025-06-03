@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Jogo de Dominó da Familia em Libras{% endblock %}
+
+{% block content %}
+    <div class="family-icon top-left"></div>
+    <div class="family-icon top-right"></div>
+    <div class="family-icon bottom-left"></div>
+    <div class="family-icon bottom-right"></div>
+
+    <h1>Jogo de Dominó da Familia em Libras</h1>
+    <p>
+        Bem-vindo ao nosso jogo de Dominó Familiar! Aqui você vai aprender sobre membros da família (mãe, pai,
+        irmãos, avós, tios, etc.), reconhecendo sinais em Libras e as palavras escritas. 
+        Pronto para se divertir e aprender com seus amigos?
+    </p>
+
+    <a href="{% url 'domino_jogo' %}">
+        <button class="start-button">Iniciar o Jogo</button>
+    </a>
+{% endblock %}

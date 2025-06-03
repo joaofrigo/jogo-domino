@@ -1,0 +1,62 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  text-align: center;
+}
+
+.area {
+  border: 2px solid #333;
+  margin: 10px auto;
+  background:
+    repeating-linear-gradient(to right, transparent, transparent 59px, #ccc 60px),
+    repeating-linear-gradient(to bottom, transparent, transparent 59px, #ccc 60px);
+  width: 1680px;  /* 28 colunas * 60px */
+  height: 1680px; /* 28 linhas * 60px */
+  position: relative;
+  user-select: none;
+}
+
+#mao {
+  height: 500px;
+  width: 550px;
+  background: #f9f9f9;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  padding: 10px;
+  cursor: default;
+  margin: 0 auto;
+  overflow-y: auto;   /* Permite scroll vertical se overflow */
+  border: 2px solid #333;
+}
+
+.peca {
+  width: 120px;
+  height: 60px;
+  border: 1px solid #000;
+  background: white;
+  margin: 5px;
+  border-radius: 8px;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+  font-weight: bold;
+  font-size: 24px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  cursor: grab;
+  position: relative;
+  user-select: none;
+  transition: box-shadow 0.2s;
+}
+
+.peca:active {
+  cursor: grabbing;
+  box-shadow: 4px 4px 12px rgba(0,0,0,0.4);
+}
+
+.rotated {
+  width: 60px !important;
+  height: 120px !important;
+  flex-direction: column;
+}
+
