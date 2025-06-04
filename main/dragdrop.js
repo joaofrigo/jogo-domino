@@ -1,196 +1,201 @@
-import {
-  CELL_WIDTH,
-  CELL_HEIGHT,
-  GRID_COLS,
-  GRID_ROWS,
-  marcarPecaNoGrid,
-  limparPecaDoGrid,
-} from './grid.js';
-import { jogadaValida } from './validator.js';
-import { renderLousa } from './render.js';
-import { atualizarExtremidadesPorLeituraDeMatriz } from './leitor_de_matriz.js';
+// dragdrop.js
+import { grid, deck } from './game.js';
+import { DominoPiece } from './domino.js';
+import { renderDebugGrid } from './debug.js';
+import { renderDeck } from './game.js';
 
-let dragOffsetX = 0;
-let dragOffsetY = 0;
+const deckContainer = document.getElementById('deckContainer');
+const gameBoard = document.getElementById('gameBoard');
 
-function calcularCelula(e, lousaDiv) {
-  const rect = lousaDiv.getBoundingClientRect();
-  const x = e.clientX - rect.left + lousaDiv.scrollLeft - dragOffsetX;
-  const y = e.clientY - rect.top  + lousaDiv.scrollTop  - dragOffsetY;
-  let col = Math.floor(x / CELL_WIDTH);
-  let row = Math.floor(y / CELL_HEIGHT);
-  col = Math.max(0, Math.min(col, GRID_COLS - 1));
-  row = Math.max(0, Math.min(row, GRID_ROWS - 1));
-  return { col, row };
-}
+let draggedPiece = null;
+let draggedFrom = null; // 'deck' ou 'board'
+let draggedFromPosition = null; // { x, y } se da grade
 
-function tratarPrimeiraPeca(peca, row, col) {
-  return true; // Nada mais a fazer: extremidades agora são lidas da matriz
-}
+deckContainer.addEventListener('dragstart', (e) => {
+  const pieceDiv = e.target.closest('.deck-piece');
+  if (pieceDiv) {
+    const sideA = parseInt(pieceDiv.dataset.sideA, 10);
+    const sideB = parseInt(pieceDiv.dataset.sideB, 10);
+    draggedPiece = deck.pieces.find(p => p.sideA === sideA && p.sideB === sideB);
+    // Remover a linha abaixo para manter orientação atual da peça
+    // if (draggedPiece) draggedPiece.orientation = 'horizontal';
 
-function encaixarEmExtremidade(peca, row, col, extremidades) {
-  const pos1 = { row, col };
-  const pos2 = peca.rotated
-    ? { row: row + 1, col }
-    : { row, col: col + 1 };
+    draggedFrom = 'deck';
+    draggedFromPosition = null;
 
-  const pontas = [];
-  if (peca.rotated) {
-    pontas.push({ valor: peca.valor1, pos: pos1, dRow: -1, dCol: 0 });
-    pontas.push({ valor: peca.valor2, pos: pos2, dRow: 1,  dCol: 0 });
-  } else {
-    pontas.push({ valor: peca.valor1, pos: pos1, dRow: 0, dCol: -1 });
-    pontas.push({ valor: peca.valor2, pos: pos2, dRow: 0, dCol: 1  });
+    e.dataTransfer.setData('text/plain', '');
   }
+});
 
-  let encontrou = false;
-  for (const { valor, pos, dRow, dCol } of pontas) {
-    const vizRow = pos.row + dRow;
-    const vizCol = pos.col + dCol;
-    if (vizRow < 0 || vizRow >= GRID_ROWS || vizCol < 0 || vizCol >= GRID_COLS) continue;
+// Novo: dragstart para peças no tabuleiro
+gameBoard.addEventListener('dragstart', (e) => {
+  const cell = e.target.closest('.cell');
+  if (!cell) return;
 
-    for (const ext of extremidades) {
-      if (ext.row === vizRow && ext.col === vizCol && ext.valor === valor) {
-        if (encontrou) return false;  // Não pode encaixar em mais de uma
-        encontrou = true;
-      }
-    }
-  }
-  return encontrou;
-}
+  const x = parseInt(cell.dataset.col, 10);
+  const y = parseInt(cell.dataset.row, 10);
+  const cellData = grid.getPieceAt(x, y);
+  if (!cellData) return;
 
-export function dragStart(e, pecasMao, pecasLousa) {
-  const pecaEl = e.target.closest('.peca');
-  const rect = pecaEl.getBoundingClientRect();
-  dragOffsetX = e.clientX - rect.left;
-  dragOffsetY = e.clientY - rect.top;
+  draggedPiece = cellData.piece;
+  draggedFrom = 'board';
+  draggedFromPosition = { x, y };
 
-  let pecaIndex = pecasMao.findIndex((p) => p.element === pecaEl);
-  let fromArea = 'mao';
-  if (pecaIndex === -1) {
-    pecaIndex = pecasLousa.findIndex((p) => p.element === pecaEl);
-    fromArea = 'lousa';
-  }
-  e.dataTransfer.setData('pecaId', pecaIndex);
-  e.dataTransfer.setData('fromArea', fromArea);
-  e.dataTransfer.effectAllowed = 'move';
-}
+  // Passa a posição no dataTransfer para saber qual peça está sendo arrastada
+  e.dataTransfer.setData('text/plain', `${x},${y}`);
+});
 
-export function dragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-}
+// Permite dragover no gameBoard e deckContainer para aceitar drops
+gameBoard.addEventListener('dragover', (e) => e.preventDefault());
+deckContainer.addEventListener('dragover', (e) => e.preventDefault());
 
-export function dropLousa(
-  e,
-  lousaDiv,
-  maoDiv,
-  pecasMao,
-  pecasLousa,
-  verificarVitoria
-) {
+// No drop do gameBoard, bloqueia drop se a peça veio do tabuleiro (para impedir "clone"):
+gameBoard.addEventListener('drop', (e) => {
   e.preventDefault();
 
-  const pecaIdRaw = e.dataTransfer.getData('pecaId');
-  if (pecaIdRaw === '') return;
-  const pecaId = parseInt(pecaIdRaw, 10);
-
-  const fromArea = e.dataTransfer.getData('fromArea');
-  const peca = fromArea === 'mao' ? pecasMao[pecaId] : pecasLousa[pecaId];
-  if (!peca) return;
-
-  const { col, row } = calcularCelula(e, lousaDiv);
-
-  limparPecaDoGrid(peca);
-
-  const resultado = jogadaValida(peca, col, row, pecasLousa);
-  if (!resultado.valido) {
-    alert('Jogada inválida: ' + resultado.erro);
-    if (peca.pos1 && peca.pos2) {
-      marcarPecaNoGrid(peca, peca.pos1, peca.pos2);
-    }
+  if (draggedFrom === 'board') {
+    // Peça veio do tabuleiro, não permite drop no tabuleiro — só pode voltar ao deck
+    console.log('Não pode reposicionar peça no tabuleiro, apenas devolver ao deck');
+    draggedPiece = null;
+    draggedFrom = null;
+    draggedFromPosition = null;
     return;
   }
 
-  const extremidades = atualizarExtremidadesPorLeituraDeMatriz();
+  const cell = e.target.closest('.cell');
+  if (!cell || !draggedPiece) return;
 
-  let encaixou = false;
+  const x = parseInt(cell.dataset.col, 10);
+  const y = parseInt(cell.dataset.row, 10);
+  const pieceLength = 2;
 
-  if (extremidades.length === 0) {
-    encaixou = tratarPrimeiraPeca(peca, row, col);
-  } else {
-    encaixou = encaixarEmExtremidade(peca, row, col, extremidades);
-  }
-
-  if (!encaixou && extremidades.length > 0) {
-    alert('Peça deve encaixar em uma extremidade disponível.');
-    if (peca.pos1 && peca.pos2) {
-      marcarPecaNoGrid(peca, peca.pos1, peca.pos2);
+  if (draggedPiece.orientation === 'horizontal') {
+    if (!grid.isWithinBounds(x + pieceLength - 1, y)) {
+      console.log('Posição fora dos limites');
+      return;
     }
+  } else if (draggedPiece.orientation === 'vertical') {
+    if (!grid.isWithinBounds(x, y + pieceLength - 1)) {
+      console.log('Posição fora dos limites');
+      return;
+    }
+  } else {
+    console.log('Orientação inválida');
     return;
   }
 
-  const pos1 = { row, col };
-  const pos2 = peca.rotated
-    ? { row: row + 1, col }
-    : { row, col: col + 1 };
-
-  marcarPecaNoGrid(peca, pos1, pos2);
-
-  peca.row = row;
-  peca.col = col;
-
-  peca.element.style.position = 'absolute';
-  peca.element.style.left = `${col * CELL_WIDTH}px`;
-  peca.element.style.top = `${row * CELL_HEIGHT}px`;
-
-  if (!pecasLousa.includes(peca)) {
-    pecasLousa.push(peca);
+  const canPlace = grid.canPlacePiece(x, y, draggedPiece, pieceLength, draggedPiece.orientation);
+  if (!canPlace) {
+    console.log('Não pode colocar peça aqui');
+    return;
   }
 
-  if (fromArea === 'mao') {
-    pecasMao.splice(pecaId, 1);
-    maoDiv.removeChild(peca.element);
-    lousaDiv.appendChild(peca.element);
+  const placed = grid.placePiece(x, y, draggedPiece, pieceLength, draggedPiece.orientation);
+  if (placed) {
+    grid.render(gameBoard);
+    removePieceFromDeck(draggedPiece);
+    draggedPiece = null;
+    draggedFrom = null;
+    draggedFromPosition = null;
+    console.log('Peça colocada com sucesso');
+    renderDebugGrid(grid, document.getElementById('debugContainer'));
+  } else {
+    console.log('Falha ao colocar peça');
   }
+});
 
-  renderLousa(lousaDiv, pecasLousa);
-  verificarVitoria();
-}
-
-
-export function dropMao(e, maoDiv, pecasMao, pecasLousa) {
+// Drop no deckContainer para devolver peça do tabuleiro ao deck
+deckContainer.addEventListener('drop', (e) => {
   e.preventDefault();
-  const pecaId = e.dataTransfer.getData('pecaId');
-  const fromArea = e.dataTransfer.getData('fromArea');
-  if (pecaId === '') return;
 
-  if (fromArea === 'lousa') {
-    const peca = pecasLousa[pecaId];
-    if (!peca) return;
+  if (draggedFrom !== 'board' || !draggedFromPosition) return;
 
-    limparPecaDoGrid(peca);
-    pecasLousa.splice(pecaId, 1);
-    adicionarPecaNaMao(peca, maoDiv, pecasMao, pecasLousa);
+  // Remove peça da grade
+  const { x, y } = draggedFromPosition;
+  const cellData = grid.getPieceAt(x, y);
+  if (!cellData) return;
+
+  const { piece } = cellData;
+  grid.removePiece(x, y);
+  deck.addPiece(piece);
+
+  // Atualiza UI
+  renderDeck(deckContainer, deck);
+  grid.render(gameBoard);
+  renderDebugGrid(grid, document.getElementById('debugContainer'));
+
+  draggedPiece = null;
+  draggedFrom = null;
+  draggedFromPosition = null;
+
+  console.log('Peça devolvida ao deck com sucesso');
+});
+
+// Função existente para remover peça do deck visualmente e no array
+function removePieceFromDeck(piece) {
+  const deckPieces = deckContainer.querySelectorAll('.deck-piece');
+  for (const el of deckPieces) {
+    if (
+      parseInt(el.dataset.sideA, 10) === piece.sideA &&
+      parseInt(el.dataset.sideB, 10) === piece.sideB
+    ) {
+      el.remove();
+      deck.pieces = deck.pieces.filter(
+        p => !(p.sideA === piece.sideA && p.sideB === piece.sideB)
+      );
+      break;
+    }
   }
 }
 
-export function adicionarPecaNaMao(peca, maoDiv, pecasMao, pecasLousa) {
-  peca.element.style.position = 'relative';
-  peca.element.style.left = '';
-  peca.element.style.top = '';
-  peca.element.classList.remove('rotated');
-  peca.rotated = false;
+// Rotaciona peça já colocada no tabuleiro (mantém seu código atual)
+/*
+gameBoard.addEventListener('dblclick', (e) => {
+  const cell = e.target.closest('.cell');
+  if (!cell) return;
 
-  peca.element.draggable = true;
-  peca.element.addEventListener('dragstart', (e) =>
-    dragStart(e, pecasMao, pecasLousa)
-  );
+  const x = parseInt(cell.dataset.col, 10);
+  const y = parseInt(cell.dataset.row, 10);
 
-  if (!maoDiv.contains(peca.element)) {
-    maoDiv.appendChild(peca.element);
+  const cellData = grid.getPieceAt(x, y);
+  if (!cellData) return;
+
+  const { piece } = cellData;
+
+  grid.removePiece(x, y);
+  piece.rotate90();
+
+  const pieceLength = 2;
+
+  if (!grid.canPlacePiece(x, y, piece, pieceLength, piece.orientation)) {
+    // Reverte rotação
+    piece.rotate90();
+    piece.rotate90();
+    piece.rotate90();
+
+    grid.placePiece(x, y, piece, pieceLength, piece.orientation);
+  } else {
+    grid.placePiece(x, y, piece, pieceLength, piece.orientation);
   }
-  if (!pecasMao.includes(peca)) {
-    pecasMao.push(peca);
-  }
-}
+
+  grid.render(gameBoard);
+  renderDebugGrid(grid, document.getElementById('debugContainer'));
+});
+*/
+
+// Rotaciona peça no baralho (novo evento)
+deckContainer.addEventListener('dblclick', (e) => {
+  const pieceDiv = e.target.closest('.deck-piece');
+  if (!pieceDiv) return;
+
+  const sideA = parseInt(pieceDiv.dataset.sideA, 10);
+  const sideB = parseInt(pieceDiv.dataset.sideB, 10);
+
+  const piece = deck.pieces.find(p => p.sideA === sideA && p.sideB === sideB);
+  if (!piece) return;
+
+  piece.rotate90();
+
+  renderDeck(deckContainer, deck);
+});
+

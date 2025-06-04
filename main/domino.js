@@ -1,86 +1,103 @@
-class Peca {
-  constructor(valor1, valor2) {
-    this.valor1 = valor1;
-    this.valor2 = valor2;
+/**
+ * Classe que representa uma peça de dominó.
+ * Cada lado possui um valor e uma variante de imagem.
+ */
+export class DominoPiece {
+    /**
+     * @param {number} sideA - Valor do lado A.
+     * @param {number} sideB - Valor do lado B.
+     * @param {string} variantA - Variante de imagem de A: '' ou 'a'.
+     * @param {string} variantB - Variante de imagem de B: '' ou 'a'.
+     */
+    constructor(sideA, sideB, variantA = '', variantB = '') {
+        this.sideA = sideA;
+        this.variantA = variantA;
 
-    this.orientacao = 'horizontal';  // Padrão: horizontal
-    this.rotated = false;
+        this.sideB = sideB;
+        this.variantB = variantB;
 
-    this.pos1 = null;  // { row, col }
-    this.pos2 = null;
-
-    this.element = this.criarElemento();
-  }
-
-  /**
-   * Define a posição da peça no grid e calcula pos2 com base na orientação.
-   * Também deve ser usado ao mover a peça.
-   */
-  posicionarNoGrid(row, col, tabuleiroGrid, GRID_ROWS, GRID_COLS) {
-    this.pos1 = { row, col };
-
-    let row2 = row;
-    let col2 = col;
-
-    if (this.orientacao === 'horizontal') {
-      col2 = col + 1;
-    } else {
-      row2 = row + 1;
+        this.orientation = 'horizontal';
+        this.rotationCount = 0;
+        this.played = false;
     }
 
-    // Validação: não pode ultrapassar os limites do grid
-    if (row2 >= GRID_ROWS || col2 >= GRID_COLS) {
-      throw new Error('Posição inválida: a peça ultrapassa os limites do grid.');
+    /**
+     * Rotaciona a peça 90° no sentido horário.
+     */
+    rotate90() {
+        this.rotationCount = (this.rotationCount + 1) % 4;
+        this.orientation = (this.rotationCount % 2 === 1) ? 'vertical' : 'horizontal';
+        if (this.rotationCount === 1 || this.rotationCount === 3) {
+            this.swapSides();
+        }
     }
 
-    this.pos2 = { row: row2, col: col2 };
-
-    // Posiciona a peça no grid
-    tabuleiroGrid[this.pos1.row][this.pos1.col] = this;
-    tabuleiroGrid[this.pos2.row][this.pos2.col] = this;
-  }
-
-  /**
-   * Altera a orientação com base na rotação e atualiza a classe CSS.
-   */
-  rotacionar() {
-    this.rotated = !this.rotated;
-    this.orientacao = this.rotated ? 'vertical' : 'horizontal';
-
-    if (this.rotated) {
-      this.element.classList.add('rotated');
-    } else {
-      this.element.classList.remove('rotated');
+    /**
+     * Inverte os lados e as variantes.
+     */
+    swapSides() {
+        [this.sideA, this.sideB] = [this.sideB, this.sideA];
+        [this.variantA, this.variantB] = [this.variantB, this.variantA];
     }
-  }
+}
 
-  /**
-   * Cria o elemento visual da peça com dois lados.
-   */
-  criarElemento() {
-    const peca = document.createElement('div');
-    peca.className = 'peca';
+/**
+ * Classe que representa um baralho de peças de dominó.
+ */
+export class Deck {
+    /**
+     * Cria um baralho com 28 peças, podendo definir variantes por lógica externa.
+     */
+    constructor() {
+        this.pieces = this.createFullDeck();
+    }
 
-    const lado1 = document.createElement('img');
-    lado1.src = `img/${this.valor1}.png`;
-    lado1.alt = this.valor1;
-    lado1.style.width = '50px';
-    lado1.style.height = '50px';
-    lado1.draggable = false;
+    /**
+     * Cria as 28 peças únicas de dominó com variantes padrão ('').
+     * Variantes podem ser alteradas após a criação conforme a necessidade.
+     */
+    createFullDeck() {
+        const pieces = [];
+        for (let i = 0; i <= 6; i++) {
+            for (let j = i; j <= 6; j++) {
+                const variantA = Math.random() < 0.5 ? '' : 'a';
+                const variantB = Math.random() < 0.5 ? '' : 'a';
+                pieces.push(new DominoPiece(i, j, variantA, variantB));
+            }
+        }
+        return pieces;
+    }
+    /**
+     * Remove e retorna a peça no índice especificado.
+     */
+    popPiece(index) {
+        if (index >= 0 && index < this.pieces.length) {
+            return this.pieces.splice(index, 1)[0];
+        }
+        return null;
+    }
 
-    const lado2 = document.createElement('img');
-    lado2.src = `img/${this.valor2}.png`;
-    lado2.alt = this.valor2;
-    lado2.style.width = '50px';
-    lado2.style.height = '50px';
-    lado2.draggable = false;
+    /**
+     * Remove a primeira ocorrência de uma peça específica.
+     */
+    removePiece(piece) {
+        const index = this.pieces.findIndex(
+            p => p.sideA === piece.sideA && p.sideB === piece.sideB
+        );
+        if (index !== -1) this.pieces.splice(index, 1);
+    }
 
-    peca.appendChild(lado1);
-    peca.appendChild(lado2);
+    /**
+     * Adiciona uma peça ao final do baralho.
+     */
+    addPiece(piece) {
+        this.pieces.push(piece);
+    }
 
-    // Rotacionar ao duplo clique
-    peca.ondblclick = () => this.rotacionar();
-
-    return peca;
-  }
+    /**
+     * Verifica se o baralho está vazio.
+     */
+    isEmpty() {
+        return this.pieces.length === 0;
+    }
 }
